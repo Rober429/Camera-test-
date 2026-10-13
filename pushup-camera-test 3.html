@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Rep camera test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #E8EDEF; --surface: #FFFFFF; --text: #1A2530; --muted: #5B6B78; --line: #D3DBE0;
+  --primary: #0B7A63; --primary-ink: #FFFFFF; --good: #0B7A63; --warn: #B45309; --bad: #B3261E;
+  --disp: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --body: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11181D; --surface: #1A242B; --text: #E6EDF1; --muted: #93A4B0; --line: #2B3841;
+    --primary: #3DC9A7; --primary-ink: #06231C; --good: #3DC9A7; --warn: #F5B14C; --bad: #FF8A80;
+    color-scheme: dark;
+  }
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+main { max-width: 640px; margin: 0 auto; padding: 14px 14px 40px; }
+h1 { font-family: var(--disp); font-size: 28px; line-height: 1; margin: 6px 0 4px; font-weight: 700; }
+h2 { font-family: var(--disp); font-size: 22px; font-weight: 700; margin: 20px 0 8px; }
+p { margin: 0 0 10px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 11px 14px; font-weight: 600; min-height: 44px; }
+.btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.btn.block { width: 100%; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* camera stage */
+.stage { position: relative; width: 100%; background: #000; border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 9; margin-bottom: 10px; }
+.stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+.stage video { object-fit: cover; }
+.hud { position: absolute; left: 0; right: 0; top: 0; padding: 10px 12px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+.count { font-family: var(--disp); font-weight: 700; font-size: 84px; line-height: 0.85; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.6); }
+.count small { display: block; font-size: 16px; font-weight: 600; letter-spacing: 0; opacity: 0.9; margin-top: 6px; }
+.chip { background: rgba(0,0,0,0.55); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+.big-countdown[hidden] { display: none; }
+.msg { position: absolute; left: 10px; right: 10px; bottom: 10px; text-align: center; background: rgba(0,0,0,0.65); color: #fff; border-radius: 10px; padding: 8px 10px; font-weight: 600; font-size: 15px; }
+.msg.good { background: rgba(11,122,99,0.92); }
+.msg.warn { background: rgba(180,83,9,0.92); }
+.msg.bad { background: rgba(179,38,30,0.92); }
+.msg.good, .msg.warn, .msg.bad { color: #fff; }
+.big-countdown { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--disp); font-weight: 700; font-size: 160px; color: #fff; text-shadow: 0 3px 16px rgba(0,0,0,0.7); pointer-events: none; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.stats b { display: block; font-family: var(--disp); font-size: 28px; line-height: 1.05; }
+.stats span { font-size: 12px; color: var(--muted); }
+.good { color: var(--good); } .bad { color: var(--bad); } .warnc { color: var(--warn); }
+label.slide { display: block; margin: 12px 0 2px; font-weight: 600; font-size: 14px; }
+input[type=range] { width: 100%; }
+.dbg { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); margin-top: 8px; min-height: 16px; }
+ol, ul { margin: 0 0 10px; padding-left: 20px; } li { margin-bottom: 4px; }
+.sets li { display: flex; justify-content: space-between; list-style: none; margin: 0; padding: 6px 0; border-top: 1px solid var(--line); }
+.sets { padding: 0; margin: 0; }
+details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rep camera test</h1>
+  <p class="muted small">Counts push-ups or squats from your front camera. Video is processed on your phone and never uploaded.</p>
+
+  <div class="card">
+    <div class="row seg" role="group" aria-label="Exercise">
+      <button class="btn" id="ui-exPush" aria-pressed="true">Push-ups</button>
+      <button class="btn" id="ui-exSquat" aria-pressed="false">Squats</button>
+    </div>
+  </div>
+
+  <div class="stage" id="ui-stage">
+    <video id="ui-video" playsinline muted autoplay></video>
+    <canvas id="ui-overlay"></canvas>
+    <div class="hud">
+      <div class="count"><span id="ui-count">0</span><small id="ui-countLabel">reps counted</small></div>
+      <div class="chip" id="ui-state">Camera off</div>
+    </div>
+    <div class="big-countdown" id="ui-countdown" hidden></div>
+    <div class="msg" id="ui-msg">Tap "Start camera" below.</div>
+  </div>
+
+  <div class="row" style="margin-bottom:10px">
+    <button class="btn primary" id="ui-btnCam">Start camera</button>
+    <button class="btn primary" id="ui-btnSet" disabled>Start set</button>
+  </div>
+  <div class="row" style="margin-bottom:10px">
+    <button class="btn" id="ui-btnReset" disabled>Reset count</button>
+    <button class="btn" id="ui-btnStop" disabled>Stop camera</button>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div><b class="good" id="ui-sGood">0</b><span>Counted</span></div>
+      <div><b class="warnc" id="ui-sShallow">0</b><span>Too shallow</span></div>
+      <div><b class="bad" id="ui-sForm">0</b><span>Bad form</span></div>
+    </div>
+    <div class="dbg" id="ui-dbg"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 6px">Saved sets</h3>
+    <ul class="sets" id="ui-sets"><li class="muted small" style="border:0">None yet. Finish a set to save it.</li></ul>
+    <div class="small muted" id="ui-dayTotal"></div>
+  </div>
+
+  <h2>Set up</h2>
+  <div class="card">
+    <ol>
+      <li>Turn your phone sideways (landscape) and prop it on the floor, about 6 feet to your side.</li>
+      <li>Your whole body, head to feet, should fit in the frame, side-on to the camera.</li>
+      <li>Tap Start camera, allow access, then Start set. You get 5 seconds to get into position.</li>
+    </ol>
+    <p class="small muted">Squats work from the side too. Wear clothes that show your elbows, hips, and knees.</p>
+  </div>
+
+  <details class="card">
+    <summary>Tune the strictness</summary>
+    <p class="small muted" style="margin-top:8px">These are the numbers the real app would tune with testers. Changes apply right away.</p>
+    <label class="slide" for="ui-rDown">Bottom of the rep: <span id="ui-vDown"></span></label>
+    <input type="range" id="ui-rDown" min="60" max="120" step="1">
+    <label class="slide" for="ui-rUp">Top of the rep (arms straight): <span id="ui-vUp"></span></label>
+    <input type="range" id="ui-rUp" min="130" max="175" step="1">
+    <label class="slide" for="ui-rBody">Body line, push-ups only (higher is stricter): <span id="ui-vBody"></span></label>
+    <input type="range" id="ui-rBody" min="130" max="178" step="1">
+    <div class="row" style="margin-top:12px"><button class="btn" id="ui-btnDefaults">Back to defaults</button><button class="btn" id="ui-btnSound" aria-pressed="true">Sound on</button></div>
+  </details>
+
+  <h2>Not in this test</h2>
+  <div class="card small muted">Face check to confirm who is doing the reps, saving reps to pools, and the video appeal. This page only tests whether the camera counts reps the way you expect.</div>
+</main>
+
+<script>
+// <counter>
+/* Rep counter: a small state machine fed one smoothed angle per frame.
+   primary = the angle that moves during the rep (elbow for push-ups, knee for squats), in degrees.
+   form    = body-line angle (shoulder-hip-ankle) for push-ups, null for squats. */
+const DEFAULTS = {
+  pushup: { down: 90, up: 155, body: 150, start: 140 },
+  squat:  { down: 100, up: 160, body: 0,  start: 145 }
+};
+class RepCounter {
+  constructor(kind, cfg) { this.kind = kind; this.cfg = cfg; this.reset(); }
+  reset() { this.phase = 'up'; this.rep = null; this.good = 0; this.shallow = 0; this.badForm = 0; }
+  step(primary, form, now) {
+    const c = this.cfg;
+    if (this.phase === 'up') {
+      if (primary < c.start) { this.phase = 'moving'; this.rep = { t0: now, min: primary, minForm: form == null ? 999 : form, reached: primary <= c.down }; }
+      return null;
+    }
+    // moving
+    const r = this.rep;
+    r.min = Math.min(r.min, primary);
+    if (form != null) r.minForm = Math.min(r.minForm, form);
+    if (primary <= c.down) r.reached = true;
+    if (primary >= c.up) {
+      this.phase = 'up'; this.rep = null;
+      const dur = now - r.t0;
+      if (dur < 500) return null;                       // jitter, not a rep
+      if (!r.reached) { this.shallow++; return { type: 'shallow', msg: 'Go lower. Reached ' + Math.round(r.min) + '°, need ' + c.down + '° or less.' }; }
+      if (this.kind === 'pushup' && r.minForm < c.body) { this.badForm++; return { type: 'form', msg: 'Keep your body straight. Body line ' + Math.round(r.minForm) + '°, need ' + c.body + '° or more.' }; }
+      this.good++; return { type: 'rep', msg: 'Rep ' + this.good + ' counted' };
+    }
+    return null;
+  }
+}
+function angleAt(a, b, c) {              // angle at b, in degrees, from points {x,y}
+  const v1x = a.x - b.x, v1y = a.y - b.y, v2x = c.x - b.x, v2y = c.y - b.y;
+  const dot = v1x * v2x + v1y * v2y, m = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y);
+  if (!m) return 180;
+  return Math.acos(Math.max(-1, Math.min(1, dot / m))) * 180 / Math.PI;
+}
+// </counter>
+</script>
+
+<script type="module">
+const VISION = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
+const $ = id => document.getElementById(id);
+const video = $('ui-video'), canvas = $('ui-overlay'), ctx = canvas.getContext('2d');
+let landmarker = null, stream = null, running = false, counting = false, kind = 'pushup';
+let cfg = { pushup: Object.assign({}, DEFAULTS.pushup), squat: Object.assign({}, DEFAULTS.squat) };
+let counter = new RepCounter('pushup', cfg.pushup);
+let smooth = { p: null, f: null }, lostSince = 0, lastVideoTime = -1, wake = null;
+let soundOn = true, audio = null, savedSets = [], currentSet = 0;
+
+// landmark indices (MediaPipe pose)
+const SIDE = { L: { sh: 11, el: 13, wr: 15, hip: 23, kn: 25, an: 27 }, R: { sh: 12, el: 14, wr: 16, hip: 24, kn: 26, an: 28 } };
+
+function setMsg(text, cls) { const m = $('ui-msg'); m.textContent = text; m.className = 'msg' + (cls ? ' ' + cls : ''); }
+function setState(t) { $('ui-state').textContent = t; }
+
+/* ---- sliders ---- */
+function syncSliders() {
+  const c = cfg[kind];
+  $('ui-rDown').value = c.down; $('ui-rUp').value = c.up; $('ui-rBody').value = c.body || 150;
+  $('ui-vDown').textContent = c.down + '°'; $('ui-vUp').textContent = c.up + '°'; $('ui-vBody').textContent = kind === 'pushup' ? c.body + '°' : 'not used';
+  $('ui-rBody').disabled = kind !== 'pushup';
+}
+['ui-rDown', 'ui-rUp', 'ui-rBody'].forEach(id => $(id).addEventListener('input', () => {
+  const c = cfg[kind];
+  c.down = +$('ui-rDown').value; c.up = +$('ui-rUp').value; if (kind === 'pushup') c.body = +$('ui-rBody').value;
+  c.start = Math.min(c.up - 10, Math.max(c.down + 25, c.start));
+  syncSliders();
+}));
+$('ui-btnDefaults').addEventListener('click', () => { cfg[kind] = Object.assign({}, DEFAULTS[kind]); counter.cfg = cfg[kind]; syncSliders(); });
+$('ui-btnSound').addEventListener('click', e => { soundOn = !soundOn; e.target.setAttribute('aria-pressed', soundOn); e.target.textContent = soundOn ? 'Sound on' : 'Sound off'; });
+
+/* ---- exercise toggle ---- */
+function pickKind(k) {
+  if (counting) return;
+  kind = k;
+  $('ui-exPush').setAttribute('aria-pressed', k === 'pushup'); $('ui-exSquat').setAttribute('aria-pressed', k === 'squat');
+  counter = new RepCounter(k, cfg[k]); renderStats(); syncSliders();
+  $('ui-countLabel').textContent = k === 'pushup' ? 'push-ups counted' : 'squats counted';
+}
+$('ui-exPush').addEventListener('click', () => pickKind('pushup'));
+$('ui-exSquat').addEventListener('click', () => pickKind('squat'));
+
+/* ---- sound ---- */
+function beep(freq, ms) {
+  if (!soundOn) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; g.gain.value = 0.15; o.connect(g); g.connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + ms / 1000);
+  } catch (e) {}
+}
+
+/* ---- model ---- */
+async function loadModel() {
+  if (landmarker) return true;
+  setMsg('Loading the pose model. This takes a few seconds the first time.');
+  try {
+    const mod = await import(VISION + '/vision_bundle.mjs');
+    const files = await mod.FilesetResolver.forVisionTasks(VISION + '/wasm');
+    const make = delegate => mod.PoseLandmarker.createFromOptions(files, {
+      baseOptions: { modelAssetPath: MODEL, delegate: delegate }, runningMode: 'VIDEO', numPoses: 1,
+      minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5
+    });
+    try { landmarker = await make('GPU'); } catch (e) { landmarker = await make('CPU'); }
+    return true;
+  } catch (e) {
+    setMsg('Could not load the pose model. Check your connection and reload. (' + (e && e.message ? e.message : e) + ')', 'bad');
+    return false;
+  }
+}
+
+/* ---- camera ---- */
+async function startCamera() {
+  if (!window.isSecureContext) { setMsg('The camera needs a secure (https) address. Open this page from your hosted link.', 'bad'); return; }
+  $('ui-btnCam').disabled = true;
+  if (!(await loadModel())) { $('ui-btnCam').disabled = false; return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+  } catch (e) {
+    setMsg('Camera blocked. In Settings, Safari, Camera, allow this site, then reload.', 'bad'); $('ui-btnCam').disabled = false; return;
+  }
+  video.srcObject = stream;
+  await video.play().catch(() => {});
+  await new Promise(r => { if (video.videoWidth) r(); else video.onloadedmetadata = r; });
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  $('ui-stage').style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
+  running = true; lastVideoTime = -1;
+  $('ui-btnSet').disabled = false; $('ui-btnStop').disabled = false; $('ui-btnReset').disabled = false;
+  setState('Camera on, not counting'); setMsg('Get your whole body in view, side-on. Then tap Start set.');
+  try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  requestAnimationFrame(loop);
+}
+function stopCamera() {
+  running = false; counting = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; video.srcObject = null; ctx.clearRect(0, 0, canvas.width, canvas.height);
+  try { if (wake) wake.release(); } catch (e) {} wake = null;
+  $('ui-btnCam').disabled = false; $('ui-btnSet').disabled = true; $('ui-btnStop').disabled = true; $('ui-btnReset').disabled = true;
+  $('ui-btnSet').textContent = 'Start set'; setState('Camera off'); setMsg('Camera stopped.');
+}
+$('ui-btnCam').addEventListener('click', startCamera);
+$('ui-btnStop').addEventListener('click', stopCamera);
+$('ui-btnReset').addEventListener('click', () => { if (counting) return; counter.reset(); renderStats(); setMsg('Count reset.'); });
+
+/* ---- set flow ---- */
+$('ui-btnSet').addEventListener('click', async () => {
+  if (counting) { finishSet(); return; }
+  counter.reset(); smooth = { p: null, f: null }; renderStats();
+  $('ui-btnSet').disabled = true; $('ui-btnReset').disabled = true;
+  for (let n = 5; n >= 1; n--) {
+    $('ui-countdown').hidden = false; $('ui-countdown').textContent = n; setMsg('Get into position.'); beep(660, 80);
+    await new Promise(r => setTimeout(r, 1000));
+    if (!running) { $('ui-countdown').hidden = true; return; }
+  }
+  $('ui-countdown').hidden = true; beep(990, 250);
+  counting = true; counter.reset(); smooth = { p: null, f: null }; lostSince = 0;
+  $('ui-btnSet').disabled = false; $('ui-btnSet').textContent = 'Finish set'; setState('Counting');
+  setMsg('Go. Counting your ' + (kind === 'pushup' ? 'push-ups' : 'squats') + '.');
+});
+function finishSet() {
+  counting = false; $('ui-btnSet').textContent = 'Start set'; $('ui-btnReset').disabled = false; setState('Camera on, not counting');
+  const n = counter.good;
+  if (n > 0) savedSets.push({ kind: kind, n: n, shallow: counter.shallow, form: counter.badForm });
+  renderSets();
+  setMsg('Set finished: ' + n + ' counted' + (counter.shallow + counter.badForm ? ', ' + (counter.shallow + counter.badForm) + ' rejected.' : '.'), n ? 'good' : '');
+}
+function renderSets() {
+  const ul = $('ui-sets');
+  if (!savedSets.length) { ul.innerHTML = '<li class="muted small" style="border:0">None yet. Finish a set to save it.</li>'; $('ui-dayTotal').textContent = ''; return; }
+  ul.innerHTML = savedSets.map((s, i) => '<li><span>Set ' + (i + 1) + ': ' + (s.kind === 'pushup' ? 'push-ups' : 'squats') + '</span><b>' + s.n + (s.shallow + s.form ? ' <span class="muted small">(' + (s.shallow + s.form) + ' rejected)</span>' : '') + '</b></li>').join('');
+  const p = savedSets.filter(s => s.kind === 'pushup').reduce((a, s) => a + s.n, 0), q = savedSets.filter(s => s.kind === 'squat').reduce((a, s) => a + s.n, 0);
+  $('ui-dayTotal').textContent = 'Total this session: ' + p + ' push-ups, ' + q + ' squats.';
+}
+function renderStats() {
+  $('ui-count').textContent = counter.good; $('ui-sGood').textContent = counter.good; $('ui-sShallow').textContent = counter.shallow; $('ui-sForm').textContent = counter.badForm;
+}
+
+/* ---- per-frame work ---- */
+function pt(l) { return { x: l.x * canvas.width, y: l.y * canvas.height }; }
+function vis(l) { return l.visibility == null ? 1 : l.visibility; }
+function chooseSide(lm) {
+  const need = kind === 'pushup' ? ['sh', 'el', 'wr', 'hip', 'an'] : ['sh', 'hip', 'kn', 'an'];
+  const score = side => need.reduce((a, k) => a + vis(lm[SIDE[side][k]]), 0) / need.length;
+  const sl = score('L'), sr = score('R');
+  return sl >= sr ? { side: 'L', s: sl, need: need } : { side: 'R', s: sr, need: need };
+}
+function drawLine(a, b, color) { ctx.strokeStyle = color; ctx.lineWidth = Math.max(4, canvas.width / 200); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+function drawDot(a, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(a.x, a.y, Math.max(6, canvas.width / 120), 0, 7); ctx.fill(); }
+
+function loop() {
+  if (!running) return;
+  requestAnimationFrame(loop);
+  if (video.readyState < 2 || video.currentTime === lastVideoTime) return;
+  lastVideoTime = video.currentTime;
+  const now = performance.now();
+  let res;
+  try { res = landmarker.detectForVideo(video, now); } catch (e) { return; }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const lm = res && res.landmarks && res.landmarks[0];
+  if (!lm) { handleLost(now, 'No body found. Step back so your whole body is in view.'); return; }
+  const pick = chooseSide(lm), ids = SIDE[pick.side];
+  const minVis = Math.min.apply(null, pick.need.map(k => vis(lm[ids[k]])));
+  const P = k => pt(lm[ids[k]]);
+  if (minVis < 0.4) { handleLost(now, 'Cannot see your ' + (kind === 'pushup' ? 'arm, hips, and feet' : 'hips, knees, and feet') + ' clearly. Move the phone back and turn side-on.'); drawBody(P, kind, '#F5B14C'); return; }
+  lostSince = 0;
+
+  let primary, form = null;
+  if (kind === 'pushup') { primary = angleAt(P('sh'), P('el'), P('wr')); form = angleAt(P('sh'), P('hip'), P('an')); }
+  else { primary = angleAt(P('hip'), P('kn'), P('an')); }
+  smooth.p = smooth.p == null ? primary : smooth.p + 0.5 * (primary - smooth.p);
+  if (form != null) smooth.f = smooth.f == null ? form : smooth.f + 0.3 * (form - smooth.f);
+
+  const okForm = kind !== 'pushup' || smooth.f >= cfg.pushup.body;
+  drawBody(P, kind, okForm ? '#3DC9A7' : '#F5B14C');
+  $('ui-dbg').textContent = (kind === 'pushup' ? 'elbow ' : 'knee ') + Math.round(smooth.p) + '°' + (kind === 'pushup' ? '   body line ' + Math.round(smooth.f) + '°' : '') + '   side ' + pick.side + '   visibility ' + minVis.toFixed(2);
+
+  if (!counting) return;
+  setState(counter.phase === 'up' ? 'Counting: top' : 'Counting: moving');
+  const ev = counter.step(smooth.p, kind === 'pushup' ? smooth.f : null, now);
+  if (ev) {
+    renderStats();
+    if (ev.type === 'rep') { setMsg(ev.msg, 'good'); beep(880, 90); if (navigator.vibrate) navigator.vibrate(30); }
+    else { setMsg(ev.msg, ev.type === 'shallow' ? 'warn' : 'bad'); beep(220, 160); }
+  }
+}
+function drawBody(P, k, color) {
+  if (k === 'pushup') { drawLine(P('sh'), P('el'), color); drawLine(P('el'), P('wr'), color); drawLine(P('sh'), P('hip'), color); drawLine(P('hip'), P('an'), color); ['sh', 'el', 'wr', 'hip', 'an'].forEach(n => drawDot(P(n), '#fff')); }
+  else { drawLine(P('sh'), P('hip'), color); drawLine(P('hip'), P('kn'), color); drawLine(P('kn'), P('an'), color); ['sh', 'hip', 'kn', 'an'].forEach(n => drawDot(P(n), '#fff')); }
+}
+function handleLost(now, text) {
+  if (!lostSince) lostSince = now;
+  if (counting && now - lostSince > 1200) { counter.phase = 'up'; counter.rep = null; }
+  if (!counting || now - lostSince > 400) setMsg(text, 'warn');
+}
+
+syncSliders(); renderStats();
+if (!window.isSecureContext) setMsg('Open this page from your https link. The camera does not work from a saved file.', 'warn');
+</script>
+</body>
+</html>
